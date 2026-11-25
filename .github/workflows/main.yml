@@ -21,7 +21,11 @@ jobs:
           mkdir -p "$HOME/theos/sdks"
           curl -sSL -o sdks.zip https://github.com/theos/sdks/archive/refs/heads/master.zip
           unzip -q sdks.zip
-          find sdks-master -name "*.sdk" -type d -exec mv {} "$HOME/theos/sdks/" \;
+          for sdk in $(find sdks-master -name "*.sdk" -type d 2>/dev/null); do
+            if [ -e "$sdk" ]; then
+              cp -rL "$sdk" "$HOME/theos/sdks/" 2>/dev/null || true
+            fi
+          done
           ls -la "$HOME/theos/sdks/"
 
           curl -sSL -o toolchain.tar.xz https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/iphoneos-arm64.tar.xz || true
