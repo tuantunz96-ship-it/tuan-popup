@@ -28,18 +28,15 @@ jobs:
           done
           ls -la "$HOME/theos/sdks/"
 
-          TOOLCHAIN_URL="https://github.com/theos/toolchain/releases/download/v0.6/linux-iphone-arm64-clang-14.tar.xz"
-          if curl -fSL -o toolchain.tar.xz "$TOOLCHAIN_URL" && file toolchain.tar.xz | grep -qiE "xz|tar"; then
-            tar -xf toolchain.tar.xz -C "$HOME/theos/toolchain/linux/iphone" --strip-components=1 || tar -xf toolchain.tar.xz -C "$HOME/theos/toolchain/linux/iphone"
-          else
-            echo "Toolchain archive not available from URL, checking system clang/ldd..."
-          fi
-          find "$HOME/theos/toolchain" -maxdepth 4 -type f -executable | head -n 30 || true
-
       - name: Build Tweak
         run: |
           export THEOS="$HOME/theos"
-          export PATH="$THEOS/toolchain/linux/iphone/bin:$PATH"
+          TOOLCHAIN_BIN="$THEOS/toolchain/linux/iphone/bin"
+          mkdir -p "$TOOLCHAIN_BIN"
+          if [ ! -x "$TOOLCHAIN_BIN/clang++" ] && command -v clang++ >/dev/null 2>&1; then
+            ln -sf "$(command -v clang++)" "$TOOLCHAIN_BIN/clang++"
+          fi
+          export PATH="$TOOLCHAIN_BIN:$PATH"
           make clean
           make
           mkdir -p output
