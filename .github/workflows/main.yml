@@ -1,23 +1,45 @@
 name: Build Dylib
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Theos
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies and Theos
         run: |
-          git clone --recursive https://github.com/theos/theos.git ~/theos
-          curl -LO https://github.com/theos/sdks/archive/master.zip
-          unzip master.zip
-          mv sdks-master/*.sdk ~/theos/sdks/
-      - name: Compile Dylib
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang lld make zip unzip git curl perl python3 libtinfo6
+          git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
+
+      - name: Install iOS SDK and Toolchain
         run: |
-          export THEOS=~/theos
+          mkdir -p "$HOME/theos/sdks"
+          curl -sSL -o sdks.zip https://github.com/theos/sdks/archive/refs/heads/master.zip
+          unzip -q sdks.zip
+          SDK_DIR=$(find sdks-master -maxdepth 1 -name "*.sdk" | head -n 1)
+          mv "$SDK_DIR" "$HOME/theos/sdks/"
+
+          curl -sSL -o toolchain.tar.xz https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/iphoneos-arm64.tar.xz || true
+          if [ -f toolchain.tar.xz ]; then
+            mkdir -p "$HOME/theos/toolchain/linux/iphone"
+            tar -xf toolchain.tar.xz -C "$HOME/theos/toolchain/linux/iphone" --strip-components=1 || true
+          fi
+
+      - name: Build Tweak
+        run: |
+          export THEOS="$HOME/theos"
           make package
           mkdir -p output
-          cp .theos/obj/debug/TuanPopup.dylib output/ || cp .theos/obj/TuanPopup.dylib output/
-      - uses: actions/upload-artifact@v4
+          find .theos/obj -name "TuanPopup.dylib" -exec cp {} output/ \;
+          ls -la output/
+
+      - name: Upload Dylib Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: TuanPopup-dylib
           path: output/TuanPopup.dylib
