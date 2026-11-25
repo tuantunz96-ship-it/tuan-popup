@@ -13,7 +13,7 @@ jobs:
       - name: Install dependencies and Theos
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential clang lld make zip unzip git curl perl python3 libtinfo6
+          sudo apt-get install -y build-essential clang lld make zip unzip git curl perl python3 libtinfo6 fakeroot
           git clone --recursive https://github.com/theos/theos.git "$HOME/theos"
 
       - name: Install iOS SDK and Toolchain
@@ -21,8 +21,8 @@ jobs:
           mkdir -p "$HOME/theos/sdks"
           curl -sSL -o sdks.zip https://github.com/theos/sdks/archive/refs/heads/master.zip
           unzip -q sdks.zip
-          SDK_DIR=$(find sdks-master -maxdepth 1 -name "*.sdk" | head -n 1)
-          mv "$SDK_DIR" "$HOME/theos/sdks/"
+          find sdks-master -name "*.sdk" -type d -exec mv {} "$HOME/theos/sdks/" \;
+          ls -la "$HOME/theos/sdks/"
 
           curl -sSL -o toolchain.tar.xz https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/iphoneos-arm64.tar.xz || true
           if [ -f toolchain.tar.xz ]; then
@@ -33,7 +33,8 @@ jobs:
       - name: Build Tweak
         run: |
           export THEOS="$HOME/theos"
-          make package
+          make clean
+          make
           mkdir -p output
           find .theos/obj -name "TuanPopup.dylib" -exec cp {} output/ \;
           ls -la output/
