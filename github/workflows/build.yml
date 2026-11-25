@@ -1,0 +1,23 @@
+name: Build Dylib
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          curl -LO https://github.com/theos/sdks/archive/master.zip
+          unzip master.zip
+          mv sdks-master/*.sdk ~/theos/sdks/
+      - name: Compile Dylib
+        run: |
+          export THEOS=~/theos
+          make package
+          mkdir -p output
+          cp .theos/obj/debug/TuanPopup.dylib output/ || cp .theos/obj/TuanPopup.dylib output/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TuanPopup-dylib
+          path: output/TuanPopup.dylib
