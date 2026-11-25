@@ -19,7 +19,7 @@ jobs:
       - name: Install iOS SDK and Toolchain
         run: |
           mkdir -p "$HOME/theos/sdks" "$HOME/theos/toolchain/linux/iphone"
-          curl -sSL -o sdks.zip https://github.com/theos/sdks/archive/refs/heads/master.zip
+          curl -fSL -o sdks.zip https://github.com/theos/sdks/archive/refs/heads/master.zip
           unzip -q sdks.zip
           for sdk in $(find sdks-master -name "*.sdk" -type d 2>/dev/null); do
             if [ -e "$sdk" ]; then
@@ -28,15 +28,18 @@ jobs:
           done
           ls -la "$HOME/theos/sdks/"
 
-          curl -sSL -o toolchain.tar.xz https://github.com/sbingner/llvm-project/releases/download/v10.0.0-1/iphoneos-arm64.tar.xz
-          tar -xf toolchain.tar.xz -C "$HOME/theos/toolchain/linux/iphone" --strip-components=1
-          find "$HOME/theos/toolchain" -maxdepth 4 -type f -executable | head -n 30
+          TOOLCHAIN_URL="https://github.com/theos/toolchain/releases/download/v0.6/linux-iphone-arm64-clang-14.tar.xz"
+          if curl -fSL -o toolchain.tar.xz "$TOOLCHAIN_URL" && file toolchain.tar.xz | grep -qiE "xz|tar"; then
+            tar -xf toolchain.tar.xz -C "$HOME/theos/toolchain/linux/iphone" --strip-components=1 || tar -xf toolchain.tar.xz -C "$HOME/theos/toolchain/linux/iphone"
+          else
+            echo "Toolchain archive not available from URL, checking system clang/ldd..."
+          fi
+          find "$HOME/theos/toolchain" -maxdepth 4 -type f -executable | head -n 30 || true
 
       - name: Build Tweak
         run: |
           export THEOS="$HOME/theos"
           export PATH="$THEOS/toolchain/linux/iphone/bin:$PATH"
-          which clang || which aarch64-apple-darwin-clang || true
           make clean
           make
           mkdir -p output
